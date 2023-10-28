@@ -2,7 +2,7 @@ import OuterUI from "@/components/auth-page";
 import authorizedRoute from "@/lib/auth";
 import fetchJson from "@/lib/fetch";
 import { ONE_HUNDRED_TWENTY_DAYS } from "@/lib/time";
-import { Anchor, Button, Checkbox, Stack, TextInput } from "@mantine/core";
+import { Anchor, Button, Stack, TextInput } from "@mantine/core";
 import { useForm, zodResolver } from "@mantine/form";
 import { showNotification } from "@mantine/notifications";
 import { setCookie } from "cookies-next";
@@ -10,21 +10,30 @@ import { GetServerSideProps } from "next";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { FC } from "react";
-import { HiOutlineAtSymbol, HiOutlineKey, HiXCircle } from "react-icons/hi";
+import {
+  HiOutlineAtSymbol,
+  HiOutlineKey,
+  HiOutlineUser,
+  HiXCircle,
+} from "react-icons/hi";
 import { z } from "zod";
-import { PostLoginResponse } from "../api/auth/[[...params]]";
+import { PostRegisterResponse } from "../api/auth/[[...params]]";
 
-const schema = z.object({
+const registerSchema = z.object({
+  username: z.string().min(3).max(21),
   email: z.string().email(),
   password: z.string().min(8).max(256),
+  repeatPassword: z.string().min(8).max(256),
 });
 
 const Login: FC = () => {
   const form = useForm({
-    validate: zodResolver(schema),
+    validate: zodResolver(registerSchema),
     initialValues: {
+      username: "",
       email: "",
       password: "",
+      repeatPassword: "",
     },
   });
   const router = useRouter();
@@ -33,19 +42,27 @@ const Login: FC = () => {
     <OuterUI
       description={
         <span className="flex flex-col gap-2">
-          Log in to your Solarius Connect account to manage your Solarius
-          information.{" "}
-          <Anchor href="/auth/register" component={Link}>
-            Don't have an account? Sign up
+          Create a Solarius Connect account to manage everything related to
+          Solarius.{" "}
+          <Anchor href="/auth/login" component={Link}>
+            Have an account? Log in
           </Anchor>
         </span>
       }
     >
       <form
         onSubmit={form.onSubmit(async (values) => {
-          await fetchJson<PostLoginResponse>("/api/auth/login", {
+          if (values.password !== values.repeatPassword)
+            return form.setFieldError(
+              "repeatPassword",
+              "Passwords do not match"
+            );
+
+          const { repeatPassword, ...rest } = values;
+
+          await fetchJson<PostRegisterResponse>("/api/auth/register", {
             method: "POST",
-            body: values,
+            body: rest,
           }).then((res) => {
             if (res.success) {
               setCookie(".solarius", res.data!.token, {
@@ -66,8 +83,17 @@ const Login: FC = () => {
       >
         <Stack gap={12}>
           <TextInput
+            label="Username"
+            placeholder="Create a username"
+            description="Your unique username to identify yourself with."
+            required
+            leftSection={<HiOutlineUser />}
+            {...form.getInputProps("username")}
+          />
+          <TextInput
             label="Email"
             placeholder="Enter your email address"
+            description="Your email address to receive important notifications."
             required
             leftSection={<HiOutlineAtSymbol />}
             {...form.getInputProps("email")}
@@ -76,19 +102,23 @@ const Login: FC = () => {
             label="Password"
             type="password"
             placeholder="Enter your password"
+            description="Your password to keep your account secure."
             required
             leftSection={<HiOutlineKey />}
             {...form.getInputProps("password")}
           />
+          <TextInput
+            label="Confirm password"
+            type="password"
+            placeholder="Confirm your password"
+            description="Confirm your password to make sure you typed it correctly."
+            required
+            leftSection={<HiOutlineKey />}
+            {...form.getInputProps("repeatPassword")}
+          />
         </Stack>
-        <div className="flex mt-4 justify-between items-center">
-          <Checkbox label="Remember me" />
-          <Anchor size="sm" component={Link} href="/auth/reset-password">
-            Forgot your password?
-          </Anchor>
-        </div>
         <Button fullWidth className="mt-6" type="submit">
-          Sign in
+          Register
         </Button>
       </form>
     </OuterUI>

@@ -1,0 +1,47 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                        String              @id @default(cuid())
+  email                     String              @unique
+  username                  String              @unique
+  passwordHash              String
+  createdAt                 DateTime            @default(now())
+  updatedAt                 DateTime            @updatedAt
+  emailVerified             Boolean             @default(false)
+  emailVerificationRequests EmailVerification[] @relation("emailVerification")
+  sessions                  Session[]           @relation("userSessions")
+}
+
+model EmailVerification {
+  id        String   @id @default(uuid())
+  user      User     @relation("emailVerification", references: [id], fields: [userId])
+  userId    String
+  code      String   @default(uuid())
+  createdAt DateTime @default(now())
+}
+
+enum OperatingSystem {
+  WINDOWS
+  MACOS
+  LINUX
+  ANDROID
+  IOS
+  OTHER
+}
+
+model Session {
+  id     String          @id @default(uuid())
+  user   User            @relation("userSessions", fields: [userId], references: [id])
+  userId String
+  token  String          @unique
+  ip     String          @default("")
+  agent  String          @default("")
+  os     OperatingSystem @default(OTHER)
+}
